@@ -236,7 +236,9 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const fetch = require("node-fetch"); 
+
+// التعديل الوحيد هنا 👇
+const fetch = global.fetch;  
 
 const app = express();
 const PORT = 3000;
@@ -259,21 +261,17 @@ app.post("/register", async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Check if user exists
     const existing = users.find((u) => u.email === email);
     if (existing) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Hash password
     const hash = await bcrypt.hash(password, 10);
 
-    // Store user
     users.push({ email, passwordHash: hash });
 
     return res.status(201).json({ message: "User registered!" });
@@ -290,24 +288,20 @@ app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Find user
     const user = users.find((u) => u.email === email);
     if (!user) {
       return res.status(400).json({ error: "User not found" });
     }
 
-    // Compare password
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
       return res.status(400).json({ error: "Wrong password" });
     }
 
-    // Generate JWT
     const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
 
     return res.json({ token });
@@ -325,7 +319,6 @@ app.get("/weather", async (req, res) => {
   try {
     const auth = req.headers.authorization;
 
-    // Check token
     if (!auth) {
       return res.status(401).json({ error: "Missing token" });
     }
@@ -335,20 +328,21 @@ app.get("/weather", async (req, res) => {
       return res.status(401).json({ error: "Invalid token format" });
     }
 
-    // Verify token
     try {
       jwt.verify(token, JWT_SECRET);
     } catch {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    // Get city
     const city = req.query.city;
     if (!city) {
       return res.status(400).json({ error: "City required" });
     }
-    // Fetch weather data
-    const url = `https://goweather.herokuapp.com/weather/${encodeURIComponent(city)}`;
+
+    const url = `https://goweather.herokuapp.com/weather/${encodeURIComponent(
+      city
+    )}`;
+
     const weatherResponse = await fetch(url);
 
     if (!weatherResponse.ok) {
